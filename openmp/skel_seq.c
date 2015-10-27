@@ -3,40 +3,12 @@
 #include<fcntl.h>
 #include<unistd.h>
 
-#define ROW 500
-#define COL 500
+#define ROW 500        //define o máximo de linhas
+#define COL 500        //define o máximo de colunas
 
 int mat[ROW][COL];
-int linha,coluna; //garantir que linha < ROW e coluna < COL
-
-int criaFicheiro(char *nome, int l) {
-    FILE *fp = fopen(nome,"w");
-    int i,j,flag=1;
-    
-    fp = fopen(nome,"w");
-
-    for(i=0; i<l-1;i++) {
-        fprintf(fp,"%d",0);
-        for(j=0;j<l-2;j++) {
-            if(flag) {
-                fprintf(fp,"%d",0);
-            } else {
-                fprintf(fp,"%d",1);
-            }
-            
-        }
-        flag = 0;
-        fprintf(fp,"%d\n",0);
-    }
-    
-    for(j=0;j<l;j++) {
-        fprintf(fp,"%d",0);
-    }
-    
-    fprintf(fp,"\n");
-    
-    return 0;
-}
+int linhas,colunas;    //garantir que linha < ROW e coluna < COL
+                       //#linhas e #colunas efectivamente usadas
 
 /**
  * Carrega a imagem para a matriz
@@ -48,46 +20,31 @@ int carregaImagem(char *path) {
     char b = '1';
 
     fp = open(path,O_RDONLY);
-
-    i = j = 0;
-    while(read(fp,&b,1)) {
-        if(b == '\n') {
-            if(flag) {
-                coluna = j;
-                flag = 0;
-            }
-            i++;
-            j=0;
-        } else {
-            mat[i][j] = atoi(&b);
-            j++;
-        }
-    }
     
-    linha = i;
-    close(fp);
-
-    return 1;
-}
-
-/**
- * Escreve o resultado num ficheiro
- * @param path
- * @return
- */
-int escreveResultado(char *path) {
-    FILE *fp;
-    int i,j;
-
-    fp = fopen(path,"w");
-
-    for(i=0; i<linha;i++) {
-        for(j=0;j<coluna;j++) {
-            fprintf(fp,"%d",mat[i][j]);
+    if(fp != -1) {
+        i = j = 0;
+        while(read(fp,&b,1)) {
+            if(b == '\n') {
+                if(flag) {
+                    colunas = j;
+                    flag = 0;
+                }
+                i++;
+                j=0;
+            } else {
+                mat[i][j] = atoi(&b);
+                j++;
+            }
         }
-        fprintf(fp,"\n");
+        
+        linhas = i;
+        
+        printf("Resolucao: %d x %d\n",linhas,colunas)
+    } else {
+        printf("ERRO: Nao foi possivel ler a imagem\n");
     }
-
+    close(fp);
+   
     return 1;
 }
 
@@ -97,8 +54,8 @@ int escreveResultado(char *path) {
 void imprimeMatriz() {
     int i,j;
 
-    for(i=0;i<linha;i++) {
-        for(j=0;j<coluna;j++) {
+    for(i=0;i<linhas;i++) {
+        for(j=0;j<colunas;j++) {
             printf("%d",mat[i][j]);
         }
         printf("\n");
@@ -137,12 +94,13 @@ int main(int argc, char **argv) {
         carregaImagem("teste.txt");
     }
 
+    /* Processamento - iniciar timer */
     while(alterou) {
         alterou = 0;
 
         /* Primeira passagem */
-        for(i=1; i<ROW-1; i++) {
-            for(j=1; j<COL-1; j++) {
+        for(i=1; i<linhas-1; i++) {
+            for(j=1; j<colunas-1; j++) {
                 if(mat[i][j]) {
                     /* vizinhos */
                     vizinhos = mat[i][j+1] + mat[i+1][j+1] + mat[i+1][j] + mat[i+1][j-1] + mat[i][j-1] + mat[i-1][j-1] + mat[i-1][j] + mat[i-1][j+1];
@@ -165,8 +123,8 @@ int main(int argc, char **argv) {
         }
 
         /* Segunda passagem */
-        for(i=1; i<ROW-1; i++) {
-            for(j=1; j<COL-1; j++) {
+        for(i=1; i<linhas-1; i++) {
+            for(j=1; j<colunas-1; j++) {
                 if(mat[i][j]) {
                     /* vizinhos */
                     vizinhos = mat[i][j+1] + mat[i+1][j+1] + mat[i+1][j] + mat[i+1][j-1] + mat[i][j-1] + mat[i-1][j-1] + mat[i-1][j] + mat[i-1][j+1];
@@ -189,7 +147,8 @@ int main(int argc, char **argv) {
         }
 
     }
-
+    /* Terminar timer */
+    
     /* escreve a matriz no ficheiro de output */
     imprimeMatriz();
 
