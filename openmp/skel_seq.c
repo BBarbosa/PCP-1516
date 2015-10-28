@@ -3,9 +3,10 @@
 #include<fcntl.h>
 #include<unistd.h>
 #include<ctype.h>
+#include<omp.h>
 
-#define ROW 500        //define o máximo de linhas
-#define COL 500        //define o máximo de colunas
+#define ROW 4000        //define o máximo de linhas
+#define COL 4000        //define o máximo de colunas
 
 char tipo[3];          //tipo de ficheiro
 int mat[ROW][COL];     //matriz onde será guardada a imagem
@@ -29,7 +30,7 @@ int carregaImagemPBM(char *path) {
         fscanf(fp,"%d %d",&c,&l); //ok
         linhas = l;
         colunas = c;
-        printf("Tipo %s\nLinhas %d Colunas %d\n",tipo,l,c);
+        //printf("Tipo %s\nLinhas %d Colunas %d\n",tipo,l,c);
         
         for(i=0;i<l;i++) {
             for(j=0;j<c;j++) {
@@ -93,6 +94,7 @@ int main(int argc, char **argv) {
     }
 
     /* Processamento - iniciar timer */
+    double time = omp_get_wtime();
     while(alterou) {
         alterou = 0;
         /* Primeira passagem */
@@ -111,7 +113,9 @@ int main(int argc, char **argv) {
                             complementos = comp(mat[i+1][j]) + comp(mat[i][j-1]) + comp(mat[i][j+1]) * comp(mat[i-1][j]);
                             if(complementos == 1) {
                                 mat[i][j] = 0;
-                                alterou = 1;
+                                if(!alterou) {
+                                    alterou = 1;
+                                }
                             }
                         }
                         
@@ -136,7 +140,9 @@ int main(int argc, char **argv) {
                             complementos = comp(mat[i][j+1]) + comp(mat[i-1][j]) + comp(mat[i+1][j]) * comp(mat[i][j-1]);
                             if(complementos == 1) {
                                 mat[i][j] = 0;
-                                alterou = 1;
+                                if(!alterou) {
+                                    alterou = 1;
+                                }
                             }
                         }
                         
@@ -147,7 +153,8 @@ int main(int argc, char **argv) {
 
     }
     /* Terminar timer */
-    
+    time = omp_get_wtime() - time;
+    printf("Tempo: %lf\n",time);
     /* escreve a matriz no ficheiro de output */
     imprimeMatriz();
 
