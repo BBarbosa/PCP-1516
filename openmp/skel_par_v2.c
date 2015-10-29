@@ -73,7 +73,6 @@ int comp(int num) {
 }
 
 /**
- * Verifica se houve transicao
  * @param act
  * @param ant
  * @return 
@@ -96,14 +95,14 @@ int main(int argc, char **argv) {
     
     /* Processamento - iniciar timer */
     double time = omp_get_wtime();
+    
     while(alterou) {
         alterou = 0;
         /* Primeira passagem */
-        #pragma omp parallel num_threads(4) 
-        #pragma omp for schedule(static) private (i)
+        #pragma omp parallel
+        #pragma omp for schedule(static,((linhas-2) / omp_get_num_threads()))
         for(i=1; i<linhas-1; i++) {
             for(j=1; j<colunas-1; j++) {
-                //printf("ID %d :: i %d j %d\n",omp_get_thread_num(),i,j);
                 /* Se o pixel for diferente de zero */
                 if(mat[i][j]) {
                     p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1]; 
@@ -113,7 +112,7 @@ int main(int argc, char **argv) {
                     if(vizinhos >= 2 && vizinhos <= 6) {
                         /* transicçoes */
                         transicoes = trans(p3,p2) + trans(p4,p3) + trans(p5,p4) + trans(p6,p5) +
-                                trans(p7,p6) + trans(p8,p7) + trans(p9,p8) + trans(p2,p9);
+                                     trans(p7,p6) + trans(p8,p7) + trans(p9,p8) + trans(p2,p9);
                         if(transicoes == 1) {
                             /* complementos */
                             complementos = comp(p4) + comp(p6) + comp(p8) * comp(p2);
@@ -129,22 +128,22 @@ int main(int argc, char **argv) {
                 }
             }
         }
-        #pragma omp barrier
+        
         /* Segunda passagem */
-        #pragma omp parallel num_threads(4)
-        #pragma omp for schedule(static) private (i)
+        #pragma omp parallel
+        #pragma omp for schedule(static,((linhas-2) / omp_get_num_threads()))
         for(i=1; i<linhas-1; i++) {
             for(j=1; j<colunas-1; j++) {
                 /* Se o pixel for diferente de zero */
                 if(mat[i][j]) {
-                    p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1];
+                    p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1]; 
                     p6 = mat[i+1][j]; p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];
                     /* vizinhos */
                     vizinhos = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
                     if(vizinhos >= 2 && vizinhos <= 6) {
                         /* transicçoes */
                         transicoes = trans(p3,p2) + trans(p4,p3) + trans(p5,p4) + trans(p6,p5) +
-                                trans(p7,p6) + trans(p8,p7) + trans(p9,p8) + trans(p2,p9);
+                                     trans(p7,p6) + trans(p8,p7) + trans(p9,p8) + trans(p2,p9);
                         if(transicoes == 1) {
                             /* complementos */
                             complementos = comp(p2) + comp(p8) + comp(p4) * comp(p6);
