@@ -14,24 +14,24 @@ int linhas,colunas;    //garantir que linha < ROW e coluna < COL
                        //#linhas e #colunas efectivamente usadas
 
 /**
- * Carrega imagem do tipo .pbm 
+ * Carrega imagem do tipo .pbm
  * @param path
- * @return 
+ * @return
  */
 int carregaImagemPBM(char *path) {
     FILE *fp;
     //char tipo[3];
     int l,c,i,j;
-    
+
     fp = fopen(path,"r");
-    
+
     if(fp) {
         fscanf(fp,"%s",tipo);     //ok
         fscanf(fp,"%d %d",&c,&l); //ok
         linhas = l;
         colunas = c;
         //printf("Tipo %s\nLinhas %d Colunas %d\n",tipo,l,c);
-        
+
         for(i=0;i<l;i++) {
             for(j=0;j<c;j++) {
                 fscanf(fp,"%d ",&mat[i][j]);
@@ -39,7 +39,7 @@ int carregaImagemPBM(char *path) {
         }
     }
     fclose(fp);
-    
+
     return 1;
 }
 
@@ -49,11 +49,11 @@ int carregaImagemPBM(char *path) {
 void imprimeMatriz() {
     int i,j;
     FILE *fp;
-    
-    fp = fopen("output_par2.ascii.pbm","w");
+
+    fp = fopen("output_par.ascii.pbm","w");
     fprintf(fp,"%s\n",tipo);
     fprintf(fp,"%d %d\n",colunas,linhas);
-    
+
     for(i=0;i<linhas;i++) {
         for(j=0;j<colunas;j++) {
             fprintf(fp,"%d ",mat[i][j]);
@@ -75,7 +75,7 @@ int comp(int num) {
 /**
  * @param act
  * @param ant
- * @return 
+ * @return
  */
 int trans(int act, int ant) {
   return (act == 1 && ant == 0);
@@ -84,7 +84,7 @@ int trans(int act, int ant) {
 int main(int argc, char **argv) {
     int alterou=1,i,j,vizinhos,transicoes,complementos;
     int p2,p3,p4,p5,p6,p7,p8,p9;
-    
+
     /* le ficheiro de input - verificar nargs */
     if(argc != 2) {
         alterou = 0;
@@ -92,10 +92,10 @@ int main(int argc, char **argv) {
     } else {
         carregaImagemPBM(argv[1]);
     }
-    
+
     /* Processamento - iniciar timer */
     double time = omp_get_wtime();
-    
+
     while(alterou) {
         alterou = 0;
         /* Primeira passagem */
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
             for(j=1; j<colunas-1; j++) {
                 /* Se o pixel for diferente de zero */
                 if(mat[i][j]) {
-                    p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1]; 
+                    p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1];
                     p6 = mat[i+1][j]; p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];
                     /* vizinhos */
                     vizinhos = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
@@ -123,12 +123,12 @@ int main(int argc, char **argv) {
                                 }
                             }
                         }
-                        
+
                     }
                 }
             }
         }
-        
+
         /* Segunda passagem */
         #pragma omp parallel
         #pragma omp for schedule(static,((linhas-2) / omp_get_num_threads()))
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
             for(j=1; j<colunas-1; j++) {
                 /* Se o pixel for diferente de zero */
                 if(mat[i][j]) {
-                    p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1]; 
+                    p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1];
                     p6 = mat[i+1][j]; p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];
                     /* vizinhos */
                     vizinhos = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
                                 }
                             }
                         }
-                        
+
                     }
                 }
             }
