@@ -7,6 +7,7 @@
 
 #define ROW 4000        //define o máximo de linhas
 #define COL 4000        //define o máximo de colunas
+#define THREADS 2       //define o número de threads
 
 char tipo[3];          //tipo de ficheiro
 int mat[ROW][COL];     //matriz onde será guardada a imagem
