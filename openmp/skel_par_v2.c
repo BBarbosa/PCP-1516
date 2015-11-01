@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
     while(alterou) {
         alterou = 0;
         /* Primeira passagem */
-        #pragma omp parallel
+        #pragma omp parallel private(i,j,p2,p3,p4,p5,p6,p7,p8,p9,vizinhos,transicoes,complementos)
         #pragma omp for schedule(static,((linhas-2) / omp_get_num_threads()))
         for(i=1; i<linhas-1; i++) {
             for(j=1; j<colunas-1; j++) {
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
         }
 
         /* Segunda passagem */
-        #pragma omp parallel
+        #pragma omp parallel private(i,j,p2,p3,p4,p5,p6,p7,p8,p9,vizinhos,transicoes,complementos)
         #pragma omp for schedule(static,((linhas-2) / omp_get_num_threads()))
         for(i=1; i<linhas-1; i++) {
             for(j=1; j<colunas-1; j++) {
