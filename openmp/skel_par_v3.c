@@ -7,6 +7,7 @@
 
 #define ROW 4000        //define o máximo de linhas
 #define COL 4000        //define o máximo de colunas
+#define THREADS 2
 
 char tipo[3];          //tipo de ficheiro
 int mat[ROW][COL];     //matriz onde será guardada a imagem
@@ -50,7 +51,7 @@ void imprimeMatriz() {
     int i,j;
     FILE *fp;
     
-    fp = fopen("output_par_v13.ascii.pbm","w");
+    fp = fopen("output_par_v13_t2.ascii.pbm","w");
     fprintf(fp,"%s\n",tipo);
     fprintf(fp,"%d %d\n",colunas,linhas);
     
@@ -93,11 +94,11 @@ int main(int argc, char **argv) {
     } else {
         carregaImagemPBM(argv[1]);
     }
-    //chunk = linhas-2/4;
+    
     /* Processamento - iniciar timer */
     double time = omp_get_wtime();
-	//omp_lock_t locks[linhas][colunas];
-    #pragma omp parallel firstprivate(chunk,sections,section,i,j,p2,p3,p4,p5,p6,p7,p8,p9,vizinhos,transicoes,linhas,colunas,alterou)
+
+    #pragma omp parallel num_threads(THREADS) firstprivate(chunk,sections,section,i,j,p2,p3,p4,p5,p6,p7,p8,p9,vizinhos,transicoes,linhas,colunas,alterou)
     {
         sections = omp_get_num_threads();
         chunk = linhas/sections;
@@ -114,18 +115,13 @@ int main(int argc, char **argv) {
                         alterou = 0;
                         for(i=1+(chunk*(section-1)); i<(chunk*section); i++) 
                         {
-                            // #pragma omp for ordered schedule(static) private (j)
                             for(j=1; j<colunas-1; j++) 
                             {
-                                //printf("ID %d :: i %d j %d\n",omp_get_thread_num(),i,j);
                                 /* Se o pixel for diferente de zero */
-                                
                                 if(mat[i][j]) 
                                 {
-                                    
                                     p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1]; 
-                                    p6 = mat[i+1][j]; p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];
-                                    
+                                    p6 = mat[i+1][j]; p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];   
                                     /* vizinhos */
                                     vizinhos = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
                                     if(vizinhos >= 2 && vizinhos <= 6) 
@@ -139,9 +135,7 @@ int main(int argc, char **argv) {
                                             complementos = comp(p4) + comp(p6) + comp(p8) * comp(p2);
                                             if(complementos == 1) 
                                             {
-                                                //omp_set_lock(&locks[i][j]);
                                                 mat[i][j] = 0;
-                                                //omp_unset_lock(&locks[i][j]);
                                                 if(!alterou) {
                                                     alterou = 1;
                                                 }
@@ -196,6 +190,68 @@ int main(int argc, char **argv) {
         
     }
     /* Terminar timer */
+    alterou=1;
+    while(alterou) {
+        alterou = 0;
+        /* Primeira passagem */
+        for(i=1; i<linhas-1; i++) {
+            for(j=1; j<colunas-1; j++) {
+                /* Se o pixel for diferente de zero */
+                if(mat[i][j]) {
+                    p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1]; p6 = mat[i+1][j];
+                    p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];
+                    /* vizinhos */
+                    vizinhos = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+                    if(vizinhos >= 2 && vizinhos <= 6) {
+                        /* transicçoes */
+                        transicoes = trans(p3,p2) + trans(p4,p3) + trans(p5,p4) + trans(p6,p5) +
+                                     trans(p7,p6) + trans(p8,p7) + trans(p9,p8) + trans(p2,p9);
+                        if(transicoes == 1) {
+                            /* complementos */
+                            complementos = comp(p4) + comp(p6) + comp(p8) * comp(p2);
+                            if(complementos == 1) {
+                                mat[i][j] = 0;
+                                if(!alterou) {
+                                    alterou = 1;
+                                }
+                            }
+                        }
+                        
+                    }
+                }
+            }
+        }
+
+        /* Segunda passagem */
+        for(i=1; i<linhas-1; i++) {
+            for(j=1; j<colunas-1; j++) {
+                /* Se o pixel for diferente de zero */
+                if(mat[i][j]) {
+                    p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1]; p6 = mat[i+1][j];
+                    p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];
+                    /* vizinhos */
+                    vizinhos = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+                    if(vizinhos >= 2 && vizinhos <= 6) {
+                        /* transicçoes */
+                        transicoes = trans(p3,p2) + trans(p4,p3) + trans(p5,p4) + trans(p6,p5) +
+                                    trans(p7,p6) + trans(p8,p7) + trans(p9,p8) + trans(p2,p9);
+                        if(transicoes == 1) {
+                            /* complementos */
+                            complementos = comp(p2) + comp(p8) + comp(p4) * comp(p6);
+                            if(complementos == 1) {
+                                mat[i][j] = 0;
+                                if(!alterou) {
+                                    alterou = 1;
+                                }
+                            }
+                        }
+                        
+                    }
+                }
+            }
+        }
+
+    }
         
     time = omp_get_wtime() - time;
 
