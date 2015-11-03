@@ -50,7 +50,7 @@ void imprimeMatriz() {
     int i,j;
     FILE *fp;
     
-    fp = fopen("output.ascii.pbm","w");
+    fp = fopen("output_seq_v1.ascii.pbm","w");
     fprintf(fp,"%s\n",tipo);
     fprintf(fp,"%d %d\n",colunas,linhas);
     
@@ -103,14 +103,14 @@ int main(int argc, char **argv) {
                 /* Se o pixel for diferente de zero */
                 if(mat[i][j]) {
                     /* vizinhos */
-                    vizinhos = mat[i][j+1] + mat[i+1][j+1] + mat[i+1][j] + mat[i+1][j-1] + mat[i][j-1] + mat[i-1][j-1] + mat[i-1][j] + mat[i-1][j+1];
+                    vizinhos = mat[i-1][j] + mat[i-1][j+1] + mat[i][j+1] + mat[i+1][j+1] + mat[i+1][j] + mat[i+1][j-1] + mat[i][j-1] + mat[i-1][j-1];
                     if(vizinhos >= 2 && vizinhos <= 6) {
                         /* transicçoes */
-                        transicoes = trans(mat[i+1][j+1],mat[i][j+1]) + trans(mat[i+1][j],mat[i+1][j+1]) + trans(mat[i+1][j-1],mat[i+1][j]) + trans(mat[i][j-1],mat[i+1][j-1]) +
-                                     trans(mat[i-1][j-1],mat[i][j-1]) + trans(mat[i-1][j],mat[i-1][j-1]) + trans(mat[i-1][j+1],mat[i-1][j]) + trans(mat[i][j+1],mat[i-1][j+1]);
+                        transicoes = trans(mat[i-1][j+1],mat[i-1][j]) + trans(mat[i][j+1],mat[i-1][j+1]) + trans(mat[i+1][j+1],mat[i][j+1]) + trans(mat[i+1][j],mat[i+1][j+1]) +
+                                     trans(mat[i+1][j-1],mat[i+1][j]) + trans(mat[i][j-1],mat[i+1][j-1]) + trans(mat[i-1][j-1],mat[i][j-1]) + trans(mat[i-1][j],mat[i-1][j-1]);
                         if(transicoes == 1) {
                             /* complementos */
-                            complementos = comp(mat[i+1][j]) + comp(mat[i][j-1]) + comp(mat[i][j+1]) * comp(mat[i-1][j]);
+                            complementos = comp(mat[i][j+1]) + comp(mat[i+1][j]) + comp(mat[i-1][j]) * comp(mat[i][j-1]);
                             if(complementos == 1) {
                                 mat[i][j] = 0;
                                 if(!alterou) {
@@ -130,14 +130,14 @@ int main(int argc, char **argv) {
                 /* Se o pixel for diferente de zero */
                 if(mat[i][j]) {
                     /* vizinhos */
-                    vizinhos = mat[i][j+1] + mat[i+1][j+1] + mat[i+1][j] + mat[i+1][j-1] + mat[i][j-1] + mat[i-1][j-1] + mat[i-1][j] + mat[i-1][j+1];
+                    vizinhos = mat[i-1][j] + mat[i-1][j+1] + mat[i][j+1] + mat[i+1][j+1] + mat[i+1][j] + mat[i+1][j-1] + mat[i][j-1] + mat[i-1][j-1];
                     if(vizinhos >= 2 && vizinhos <= 6) {
                         /* transicçoes */
-                        transicoes = trans(mat[i+1][j+1],mat[i][j+1]) + trans(mat[i+1][j],mat[i+1][j+1]) + trans(mat[i+1][j-1],mat[i+1][j]) + trans(mat[i][j-1],mat[i+1][j-1]) +
-                                     trans(mat[i-1][j-1],mat[i][j-1]) + trans(mat[i-1][j],mat[i-1][j-1]) + trans(mat[i-1][j+1],mat[i-1][j]) + trans(mat[i][j+1],mat[i-1][j+1]);
+                        transicoes = trans(mat[i-1][j+1],mat[i-1][j]) + trans(mat[i][j+1],mat[i-1][j+1]) + trans(mat[i+1][j+1],mat[i][j+1]) + trans(mat[i+1][j],mat[i+1][j+1]) +
+                                     trans(mat[i+1][j-1],mat[i+1][j]) + trans(mat[i][j-1],mat[i+1][j-1]) + trans(mat[i-1][j-1],mat[i][j-1]) + trans(mat[i-1][j],mat[i-1][j-1]);
                         if(transicoes == 1) {
                             /* complementos */
-                            complementos = comp(mat[i][j+1]) + comp(mat[i-1][j]) + comp(mat[i+1][j]) * comp(mat[i][j-1]);
+                            complementos = comp(mat[i-1][j]) + comp(mat[i][j-1]) + comp(mat[i][j+1]) * comp(mat[i+1][j]);
                             if(complementos == 1) {
                                 mat[i][j] = 0;
                                 if(!alterou) {
