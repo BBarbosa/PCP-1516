@@ -16,7 +16,6 @@ int linhas,colunas;    //garantir que linha < ROW e coluna < COL, #linhas e #col
  */
 int carregaImagemPBM(char *path) {
     FILE *fp;
-    //char tipo[3];
     int l,c,i,j;
 
     fp = fopen(path,"r");
@@ -26,7 +25,6 @@ int carregaImagemPBM(char *path) {
         fscanf(fp,"%d %d",&c,&l); //ok
         linhas = l;
         colunas = c;
-        //printf("Tipo %s\nLinhas %d Colunas %d\n",tipo,l,c);
 
         for(i=0;i<l;i++) {
             for(j=0;j<c;j++) {
@@ -46,7 +44,7 @@ void imprimeMatriz() {
     int i,j;
     FILE *fp;
 
-    fp = fopen("output.ascii.pbm","w");
+    fp = fopen("output_seq.ascii.pbm","w");
     fprintf(fp,"%s\n",tipo);
     fprintf(fp,"%d %d\n",colunas,linhas);
 
@@ -87,47 +85,50 @@ int val(char n) {
     return (n - '0');
 }
 
-
-
+/**
+ * main
+ */
 int main(int argc, char **argv )
 {
     int rank, size;
     MPI_Comm new_comm;
 
+    carregaImagemPBM("imagens/washington.ascii.pbm");
+
     MPI_Init( &argc, &argv );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
     MPI_Comm_split( MPI_COMM_WORLD, rank == 0, 0, &new_comm );
-    if (rank == 0)
-	     master_io( MPI_COMM_WORLD, new_comm );
-    else
-	     slave_io( MPI_COMM_WORLD, new_comm , 5);
+
+    if (rank == 0) {
+      master( MPI_COMM_WORLD, new_comm, mat );
+    } else {
+      slave( MPI_COMM_WORLD, new_comm, linhas, colunas, mat );
+    }
 
     MPI_Finalize();
     return 0;
 }
 
 /* This is the master */
-int master_io(MPI_Comm master_comm, MPI_Comm comm)
+int master(MPI_Comm master_comm, MPI_Comm comm, char **buf)
 {
     int        i,j, size;
-    char       buf[256];
     MPI_Status status;
 
     MPI_Comm_size( master_comm, &size );
     for (j=1; j<=2; j++) {
 	      for (i=1; i<size; i++) {
-	         MPI_Recv( buf, 256, MPI_CHAR, i, 0, master_comm, &status );
-	         fputs( buf, stdout );
+	         MPI_Recv( buf, (linhas*colunas), MPI_CHAR, i, 0, master_comm, &status );
+	         imprimeMatriz();
 	      }
     }
 }
 
 /* This is the slave */
-int slave_io(MPI_Comm master_comm, MPI_Comm comm, int l, int c, char **buf)
+int slave(MPI_Comm master_comm, MPI_Comm comm, int l, int c, char **buf)
 {
     int alterou=1,i,j,vizinhos,transicoes,complementos;
     int p2,p3,p4,p5,p6,p7,p8,p9;
-    //char buf[l][c];
     int  rank;
 
     MPI_Comm_rank( comm, &rank );
@@ -194,7 +195,5 @@ int slave_io(MPI_Comm master_comm, MPI_Comm comm, int l, int c, char **buf)
 
     }
     /**/
-    MPI_Send( buf, strlen(buf) + 1, MPI_CHAR, 0, 0, master_comm );
-
-    return 0;
+    MPI_Send( buf, (l*c), MPI_CHAR, 0, 0, master_comm );
 }

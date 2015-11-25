@@ -1,4 +1,4 @@
 CC = mpicc
 
 all:
-	$(CC) skel_seq.c -o seq
+	$(CC) skel_seq.c -o exe
