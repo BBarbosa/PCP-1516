@@ -2,11 +2,15 @@
 #include <string.h>
 #include "mpi.h"
 
-#define ROW 4000        //define o máximo de linhas
-#define COL 4000        //define o máximo de colunas
+#define ROW 5000        //define o máximo de linhas
+#define COL 5000        //define o máximo de colunas
+
+#define MASTER 0
+#define FROM_MASTER 1
+#define FROM_WORKER 2
 
 char tipo[3];          //tipo de ficheiro
-char mat[ROW][COL];    //matriz onde será guardada a imagem
+int mat[ROW][COL];    //matriz onde será guardada a imagem
 int linhas,colunas;    //garantir que linha < ROW e coluna < COL, #linhas e #colunas efectivamente usadas
 
 /**
@@ -28,7 +32,7 @@ int carregaImagemPBM(char *path) {
 
         for(i=0;i<l;i++) {
             for(j=0;j<c;j++) {
-                fscanf(fp,"%c ",&mat[i][j]);
+                fscanf(fp,"%d ",&mat[i][j]);
             }
         }
     }
@@ -44,13 +48,13 @@ void imprimeMatriz() {
     int i,j;
     FILE *fp;
 
-    fp = fopen("output_seq.ascii.pbm","w");
+    fp = fopen("output_par.ascii.pbm","w");
     fprintf(fp,"%s\n",tipo);
     fprintf(fp,"%d %d\n",colunas,linhas);
 
     for(i=0;i<linhas;i++) {
         for(j=0;j<colunas;j++) {
-            fprintf(fp,"%c ",mat[i][j]);
+            fprintf(fp,"%d ",mat[i][j]);
         }
         fprintf(fp,"\n");
     }
@@ -62,8 +66,8 @@ void imprimeMatriz() {
  * @param num
  * @return
  */
-int comp(char num) {
-    return (num == '0' ? 1 : 0);
+int comp(int num) {
+    return (num == 0 ? 1 : 0);
 }
 
 /**
@@ -72,8 +76,8 @@ int comp(char num) {
  * @param ant
  * @return
  */
-int trans(char act, char ant) {
-  return (act == '1' && ant == '0');
+int trans(int act, int ant) {
+  return (act == 1 && ant == 0);
 }
 
 /**
@@ -81,8 +85,8 @@ int trans(char act, char ant) {
  * @param n
  * @return
  */
-int val(char n) {
-    return (n - '0');
+int val(int n) {
+    return n;
 }
 
 /**
@@ -90,24 +94,152 @@ int val(char n) {
  */
 int main(int argc, char **argv )
 {
-    int rank, size;
-    MPI_Comm new_comm;
+    int numtasks,
+        taskid,
+        numworkers,
+        source,
+        dest,
+        mtype,
+        rows,
+        averow, extra, offset,
+        i, j, k, rc;
+    MPI_Status status;
 
-    carregaImagemPBM("imagens/washington.ascii.pbm");
+    if(arcg < 2) {
+      printf("#ERRO: Insira uma imagem\n");
+      exit(1);
+    } else {
+      carregaImagemPBM(argv[1]);
+    }
 
     MPI_Init( &argc, &argv );
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-    MPI_Comm_split( MPI_COMM_WORLD, rank == 0, 0, &new_comm );
+    MPI_Comm_rank( MPI_COMM_WORLD, &taskid );
+    MPI_Comm_size( MPI_COMM_WORLD, &numtasks )
+    //MPI_Comm_split( MPI_COMM_WORLD, rank == 0, 0, &new_comm );
 
-    if (rank == 0) {
-      master( MPI_COMM_WORLD, new_comm, mat );
-    } else {
-      slave( MPI_COMM_WORLD, new_comm, linhas, colunas, mat );
+    if(numtasks < 2) {
+      printf("#ERRO: Precisa de, pelo menos, 2 tasks!\n");
+      MPI_Abort(MPI_COMM_WORLD, rc);
+      exit(1);
+    }
+
+    numworkers = numtasks-1;
+
+    /******************** MASTER *********************/
+    if (taskid == MASTER) {
+      printf("MPI iniciado com %d tasks.\n",numtasks);
+      /* envia os dados da matriz*/
+      averow = linhas / numworkers;
+      extra = linhas % numworkes;
+      offset = 0;
+      mytype = FROM_MASTER;
+
+      for(dest=1; dest<=numworkes; dest++) {
+        rows = (dest <= extra) ? averow+1 : averow;
+        printf("A enviar %d linhas para a task %d offset=%d\n",rows,dest,offset);
+        MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+        MPI_Send(&mat[offset][0], rows*colunas, MPI_INT, dest, mtype,
+                  MPI_COMM_WORLD);
+      }
+
+      /* Recebe resultados */
+      mytype = FROM_WORKER;
+      for(i=1; i<=numworkes; i++) {
+        source = i;
+        MPI_Recv(&offset, 1, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&rows, 1, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
+        MPI_Recv(&mat[offset][0], rows*colunas, MPI_INT, source, mtype,
+                 MPI_COMM_WORLD, &status);
+        printf("Recebi resultados da task %d\n",source);
+      }
+
+      /* Imprime resultados */
+      imprimeMatriz();
+    }
+
+    /******************** WORKER ********************/
+    if(taskid > MASTER) {
+      mytype = FROM_MASTER;
+      MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+      MPI_Recv(&rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+      MPI_Recv(&mat, rows*colunas, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+
+      /* Processamento */
+      int alterou=1,vizinhos,transicoes,complementos;
+      int p2,p3,p4,p5,p6,p7,p8,p9;
+
+      while(alterou) {
+          alterou = 0;
+          /* Primeira passagem */
+          for(i=1; i<linhas-1; i++) {
+              for(j=1; j<colunas-1; j++) {
+                  /* Se o pixel for diferente de zero */
+                  if(mat[i][j]) {
+                      p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1];
+                      p6 = mat[i+1][j]; p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];
+                      /* vizinhos */
+                      vizinhos = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+                      if(vizinhos >= 2 && vizinhos <= 6) {
+                          /* transicçoes */
+                          transicoes = trans(p3,p2) + trans(p4,p3) + trans(p5,p4) + trans(p6,p5) +
+                                       trans(p7,p6) + trans(p8,p7) + trans(p9,p8) + trans(p2,p9);
+                          if(transicoes == 1) {
+                              /* complementos */
+                              complementos = ((p2 && p4 && p6)==0 && (p4 && p6 && p8)==0 );
+                              if(complementos == 1) {
+                                  mat[i][j] = 0;
+                                  if(!alterou) {
+                                      alterou = 1;
+                                  }
+                              }
+                          }
+
+                      }
+                  }
+              }
+          }
+
+          /* Segunda passagem */
+          for(i=1; i<linhas-1; i++) {
+              for(j=1; j<colunas-1; j++) {
+                  /* Se o pixel for diferente de zero */
+                  if(mat[i][j]) {
+                      p2 = mat[i-1][j]; p3 = mat[i-1][j+1]; p4 = mat[i][j+1]; p5 = mat[i+1][j+1];
+                      p6 = mat[i+1][j]; p7 = mat[i+1][j-1]; p8 = mat[i][j-1]; p9 = mat[i-1][j-1];
+                      /* vizinhos */
+                      vizinhos = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+                      if(vizinhos >= 2 && vizinhos <= 6) {
+                          /* transicçoes */
+                          transicoes = trans(p3,p2) + trans(p4,p3) + trans(p5,p4) + trans(p6,p5) +
+                                       trans(p7,p6) + trans(p8,p7) + trans(p9,p8) + trans(p2,p9);
+                          if(transicoes == 1) {
+                              /* complementos */
+                              complementos = ((p2 && p4 && p8)==0 && (p2 && p6 && p8)==0);
+                              if(complementos == 1) {
+                                  mat[i][j] = 0;
+                                  if(!alterou) {
+                                      alterou = 1;
+                                  }
+                              }
+                          }
+
+                      }
+                  }
+              }
+          }
+      }
+
+      mtype = FROM_WORKER;
+      MPI_Send(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
+      MPI_Send(&rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
+      MPI_Send(&mat, rows*colunas, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
     }
 
     MPI_Finalize();
     return 0;
 }
+
 
 /* This is the master */
 int master(MPI_Comm master_comm, MPI_Comm comm, char **buf)
