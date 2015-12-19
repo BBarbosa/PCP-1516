@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "mpi.h"
 
@@ -105,16 +106,17 @@ int main(int argc, char **argv )
         i, j, k, rc;
     MPI_Status status;
 
-    if(arcg < 2) {
+    if(argc < 2) {
       printf("#ERRO: Insira uma imagem\n");
       exit(1);
     } else {
       carregaImagemPBM(argv[1]);
+      //printf(" >>> Imagem: %s <<<\n",argv[1]);
     }
 
     MPI_Init( &argc, &argv );
     MPI_Comm_rank( MPI_COMM_WORLD, &taskid );
-    MPI_Comm_size( MPI_COMM_WORLD, &numtasks )
+    MPI_Comm_size( MPI_COMM_WORLD, &numtasks );
     //MPI_Comm_split( MPI_COMM_WORLD, rank == 0, 0, &new_comm );
 
     if(numtasks < 2) {
@@ -130,11 +132,11 @@ int main(int argc, char **argv )
       printf("MPI iniciado com %d tasks.\n",numtasks);
       /* envia os dados da matriz*/
       averow = linhas / numworkers;
-      extra = linhas % numworkes;
+      extra = linhas % numworkers;
       offset = 0;
-      mytype = FROM_MASTER;
+      mtype = FROM_MASTER;
 
-      for(dest=1; dest<=numworkes; dest++) {
+      for(dest=1; dest<=numworkers; dest++) {
         rows = (dest <= extra) ? averow+1 : averow;
         printf("A enviar %d linhas para a task %d offset=%d\n",rows,dest,offset);
         MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -144,8 +146,8 @@ int main(int argc, char **argv )
       }
 
       /* Recebe resultados */
-      mytype = FROM_WORKER;
-      for(i=1; i<=numworkes; i++) {
+      mtype = FROM_WORKER;
+      for(i=1; i<=numworkers; i++) {
         source = i;
         MPI_Recv(&offset, 1, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
         MPI_Recv(&rows, 1, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
@@ -160,7 +162,7 @@ int main(int argc, char **argv )
 
     /******************** WORKER ********************/
     if(taskid > MASTER) {
-      mytype = FROM_MASTER;
+      mtype = FROM_MASTER;
       MPI_Recv(&offset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
       MPI_Recv(&rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
       MPI_Recv(&mat, rows*colunas, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
